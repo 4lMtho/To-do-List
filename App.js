@@ -1,23 +1,25 @@
-// src/App.js
-import { useEffect, useState } from "react";
-import { collection, addDoc, onSnapshot, deleteDoc, doc } from "firebase/firestore";
+import { useState, useEffect } from "react";
 import { db } from "./firebase";
+import {
+  collection,
+  addDoc,
+  onSnapshot,
+  deleteDoc,
+  doc
+} from "firebase/firestore";
+import "./App.css";
 
 function App() {
+  const [task, setTask] = useState("");
   const [tasks, setTasks] = useState([]);
-  const [input, setInput] = useState("");
 
-  useEffect(() => {
-    const unsub = onSnapshot(collection(db, "tasks"), (snapshot) => {
-      setTasks(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
-    });
-    return unsub;
-  }, []);
+  const tasksRef = collection(db, "tasks");
 
-  const addTask = async () => {
-    if (input.trim()) {
-      await addDoc(collection(db, "tasks"), { text: input });
-      setInput("");
+  const addTask = async (e) => {
+    e.preventDefault();
+    if (task.trim()) {
+      await addDoc(tasksRef, { text: task });
+      setTask("");
     }
   };
 
@@ -25,23 +27,37 @@ function App() {
     await deleteDoc(doc(db, "tasks", id));
   };
 
+  useEffect(() => {
+    const unsubscribe = onSnapshot(tasksRef, (snapshot) => {
+      const updatedTasks = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      setTasks(updatedTasks);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
   return (
-    <div className="p-6 max-w-md mx-auto">
-      <h1 className="text-2xl font-bold mb-4">To-Do List</h1>
-      <div className="flex mb-4">
+    <div className="app">
+      <h1>☁️ Cloud To-Do List</h1>
+
+      <form onSubmit={addTask} className="task-form">
         <input
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="border p-2 flex-grow"
-          placeholder="Enter a task"
+          type="text"
+          placeholder="Add a new task..."
+          value={task}
+          onChange={(e) => setTask(e.target.value)}
         />
-        <button onClick={addTask} className="ml-2 px-4 bg-blue-500 text-white">Add</button>
-      </div>
-      <ul>
-        {tasks.map((task) => (
-          <li key={task.id} className="flex justify-between border-b py-2">
-            {task.text}
-            <button onClick={() => deleteTask(task.id)} className="text-red-500">Delete</button>
+        <button type="submit">➕</button>
+      </form>
+
+      <ul className="task-list">
+        {tasks.map((t) => (
+          <li key={t.id}>
+            {t.text}
+            <button onClick={() => deleteTask(t.id)}>🗑️</button>
           </li>
         ))}
       </ul>
